@@ -7,6 +7,7 @@
   let activeLineId = null;
   let activeImage = data.initialImage;
   let seeking = false;
+  let karaokeFrame = null;
 
   function formatTime(seconds) {
     if (!Number.isFinite(seconds)) return "0:00";
@@ -209,11 +210,42 @@
     $("#duration").textContent = formatTime(audio.duration);
   }
 
+  function runKaraokeFrame() {
+    updateKaraoke();
+    if (audio.paused || audio.ended) {
+      karaokeFrame = null;
+      return;
+    }
+    karaokeFrame = window.requestAnimationFrame(runKaraokeFrame);
+  }
+
+  function startKaraokeLoop() {
+    if (karaokeFrame !== null) return;
+    karaokeFrame = window.requestAnimationFrame(runKaraokeFrame);
+  }
+
+  function stopKaraokeLoop() {
+    if (karaokeFrame !== null) {
+      window.cancelAnimationFrame(karaokeFrame);
+      karaokeFrame = null;
+    }
+    updateKaraoke();
+  }
+
   audio.addEventListener("loadedmetadata", syncAudioMetadata);
   audio.addEventListener("timeupdate", updateKaraoke);
-  audio.addEventListener("play", updatePlayState);
-  audio.addEventListener("pause", updatePlayState);
-  audio.addEventListener("ended", updatePlayState);
+  audio.addEventListener("play", () => {
+    updatePlayState();
+    startKaraokeLoop();
+  });
+  audio.addEventListener("pause", () => {
+    stopKaraokeLoop();
+    updatePlayState();
+  });
+  audio.addEventListener("ended", () => {
+    stopKaraokeLoop();
+    updatePlayState();
+  });
 
   renderReading();
   updatePlayState();
